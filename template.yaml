@@ -2,27 +2,6 @@ AWSTemplateFormatVersion: 2010-09-09
 Transform: AWS::Serverless-2016-10-31
 Description: Stackery Serverless API Example Stack
 Resources:
-  apiFE76C470:
-    Type: AWS::Serverless::Api
-    Properties:
-      Name: !Sub
-        - ${ResourceName} From Stackery Stack ${StackeryStackTagName} Environment ${StackeryEnvironmentTagName}
-        - ResourceName: namedApi
-      StageName: !Ref StackeryEnvironmentAPIGatewayStageName
-      DefinitionBody:
-        swagger: '2.0'
-        info: {}
-        paths:
-          /:
-            get:
-              x-amazon-apigateway-integration:
-                httpMethod: POST
-                type: aws_proxy
-                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${getWelcomePage.Arn}/invocations
-              responses: {}
-      EndpointConfiguration: REGIONAL
-    Metadata:
-      StackeryName: namedApi
   TriggerDeployFrontEndOnDeploy:
     Type: Custom::TriggerDeployFrontEndOnDeploy
     Properties:
@@ -105,14 +84,35 @@ Resources:
       Policies:
         - AWSXrayWriteOnlyAccess
       Events:
-        apiFE76C470:
+        API:
           Type: Api
           Properties:
             Path: /
             Method: GET
-            RestApiId: !Ref apiFE76C470
+            RestApiId: !Ref API
     Metadata:
       StackeryName: getWelcomePage
+  API:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub
+        - ${ResourceName} From Stackery Stack ${StackeryStackTagName} Environment ${StackeryEnvironmentTagName}
+        - ResourceName: namedApi
+      StageName: !Ref StackeryEnvironmentAPIGatewayStageName
+      DefinitionBody:
+        swagger: '2.0'
+        info: {}
+        paths:
+          /:
+            get:
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${getWelcomePage.Arn}/invocations
+              responses: {}
+      EndpointConfiguration: REGIONAL
+    Metadata:
+      StackeryName: namedApi
 Parameters:
   StackeryStackTagName:
     Type: String
