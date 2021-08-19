@@ -2,30 +2,6 @@ AWSTemplateFormatVersion: 2010-09-09
 Transform: AWS::Serverless-2016-10-31
 Description: Stackery Serverless API Example Stack
 Resources:
-  function61D00F31:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: !Sub ${AWS::StackName}-function61D00F31
-      Description: !Sub
-        - Stackery Stack ${StackeryStackTagName} Environment ${StackeryEnvironmentTagName} Function ${ResourceName}
-        - ResourceName: getWelcomePage
-      CodeUri: src/getWelcomePage
-      Handler: index.handler
-      Runtime: nodejs8.10
-      MemorySize: 3008
-      Timeout: 30
-      Tracing: Active
-      Policies:
-        - AWSXrayWriteOnlyAccess
-      Events:
-        apiFE76C470:
-          Type: Api
-          Properties:
-            Path: /
-            Method: GET
-            RestApiId: !Ref apiFE76C470
-    Metadata:
-      StackeryName: getWelcomePage
   apiFE76C470:
     Type: AWS::Serverless::Api
     Properties:
@@ -42,21 +18,60 @@ Resources:
               x-amazon-apigateway-integration:
                 httpMethod: POST
                 type: aws_proxy
-                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${function61D00F31.Arn}/invocations
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${getWelcomePage.Arn}/invocations
               responses: {}
       EndpointConfiguration: REGIONAL
     Metadata:
       StackeryName: namedApi
-  function8E6C5467:
+  TriggerDeployFrontEndOnDeploy:
+    Type: Custom::TriggerDeployFrontEndOnDeploy
+    Properties:
+      ServiceToken: !GetAtt deployFrontEnd.Arn
+      Trigger: !Ref StackeryDeploymentTimestamp
+  deployFrontEnd:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub ${AWS::StackName}-function8E6C5467
+      FunctionName: !Sub ${AWS::StackName}-deployFrontEnd
+      Description: !Sub
+        - Stackery Stack ${StackeryStackTagName} Environment ${StackeryEnvironmentTagName} Function ${ResourceName}
+        - ResourceName: deployFrontEnd
+      CodeUri: src/deployFrontEnd
+      Handler: index.handler
+      Runtime: nodejs14.x
+      MemorySize: 3008
+      Timeout: 300
+      Tracing: Active
+      Policies:
+        - AWSXrayWriteOnlyAccess
+        - S3CrudPolicy:
+            BucketName: !Ref objectStore
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:PutObjectAcl
+              Resource:
+                - !Sub ${objectStore.Arn}/*
+      Environment:
+        Variables:
+          XDG_CONFIG_HOME: /tmp/.config
+          BUCKET_NAME: !Ref objectStore
+          BUCKET_ARN: !GetAtt objectStore.Arn
+    Metadata:
+      StackeryName: deployFrontEnd
+  deployFrontEndDeployTrigger:
+    Type: Custom::FunctionDeployTrigger
+    Properties:
+      ServiceToken: !GetAtt deployFrontEnd.Arn
+  logErrors:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-logErrors
       Description: !Sub
         - Stackery Stack ${StackeryStackTagName} Environment ${StackeryEnvironmentTagName} Function ${ResourceName}
         - ResourceName: logErrors
       CodeUri: src/logErrors
       Handler: index.handler
-      Runtime: nodejs8.10
+      Runtime: nodejs14.x
       MemorySize: 3008
       Timeout: 30
       Tracing: Active
@@ -64,51 +79,40 @@ Resources:
         - AWSXrayWriteOnlyAccess
     Metadata:
       StackeryName: logErrors
-  function9D4ED975:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: !Sub ${AWS::StackName}-function9D4ED975
-      Description: !Sub
-        - Stackery Stack ${StackeryStackTagName} Environment ${StackeryEnvironmentTagName} Function ${ResourceName}
-        - ResourceName: deployFrontEnd
-      CodeUri: src/deployFrontEnd
-      Handler: index.handler
-      Runtime: nodejs8.10
-      MemorySize: 3008
-      Timeout: 300
-      Tracing: Active
-      Policies:
-        - AWSXrayWriteOnlyAccess
-        - S3CrudPolicy:
-            BucketName: !Ref objectStore24B2BE91
-        - Statement:
-            - Effect: Allow
-              Action:
-                - s3:PutObjectAcl
-              Resource:
-                - !Sub ${objectStore24B2BE91.Arn}/*
-      Environment:
-        Variables:
-          XDG_CONFIG_HOME: /tmp/.config
-          BUCKET_NAME: !Ref objectStore24B2BE91
-          BUCKET_ARN: !GetAtt objectStore24B2BE91.Arn
-    Metadata:
-      StackeryName: deployFrontEnd
-  objectStore24B2BE91:
+  objectStore:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub ${AWS::StackName}-objectstore24b2be91
+      BucketName: !Sub ${AWS::StackName}-objectstore
       AccessControl: PublicRead
       WebsiteConfiguration:
         IndexDocument: index.html
         ErrorDocument: index.html
     Metadata:
       StackeryName: S3 Website Hosting
-  TriggerDeployFrontEndOnDeploy:
-    Type: Custom::TriggerDeployFrontEndOnDeploy
+  getWelcomePage:
+    Type: AWS::Serverless::Function
     Properties:
-      ServiceToken: !GetAtt function9D4ED975.Arn
-      Trigger: !Ref StackeryDeploymentTimestamp
+      FunctionName: !Sub ${AWS::StackName}-getWelcomePage
+      Description: !Sub
+        - Stackery Stack ${StackeryStackTagName} Environment ${StackeryEnvironmentTagName} Function ${ResourceName}
+        - ResourceName: getWelcomePage
+      CodeUri: src/getWelcomePage
+      Handler: index.handler
+      Runtime: nodejs14.x
+      MemorySize: 3008
+      Timeout: 30
+      Tracing: Active
+      Policies:
+        - AWSXrayWriteOnlyAccess
+      Events:
+        apiFE76C470:
+          Type: Api
+          Properties:
+            Path: /
+            Method: GET
+            RestApiId: !Ref apiFE76C470
+    Metadata:
+      StackeryName: getWelcomePage
 Parameters:
   StackeryStackTagName:
     Type: String
