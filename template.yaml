@@ -41,23 +41,6 @@ Resources:
     Type: Custom::FunctionDeployTrigger
     Properties:
       ServiceToken: !GetAtt deployFrontEnd.Arn
-  logErrors:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: !Sub ${AWS::StackName}-logErrors
-      Description: !Sub
-        - Stackery Stack ${StackeryStackTagName} Environment ${StackeryEnvironmentTagName} Function ${ResourceName}
-        - ResourceName: logErrors
-      CodeUri: src/logErrors
-      Handler: index.handler
-      Runtime: nodejs14.x
-      MemorySize: 3008
-      Timeout: 30
-      Tracing: Active
-      Policies:
-        - AWSXrayWriteOnlyAccess
-    Metadata:
-      StackeryName: logErrors
   objectStore:
     Type: AWS::S3::Bucket
     Properties:
